@@ -14,7 +14,7 @@ import b64mod
 import xxtea
 
 session = requests.Session()
-BASE_URL = 'https://auth.tsinghua.edu.cn'
+BASE_URL = 'https://auth4.tsinghua.edu.cn'
 
 
 def get_challenge(username, ip='', double_stack=1, off_campus=True,
@@ -79,11 +79,6 @@ def login(username, password, challenge, ip='', double_stack=1, ac_id=1,
     r = session.get(BASE_URL + '/cgi-bin/srun_portal',
                     params=params).text
     r = json.loads(r[2:-1])
-    try:
-        assert r['error'] == 'ok'
-    except AssertionError:
-        print(r)
-        raise
     return r
 
 
@@ -175,6 +170,13 @@ def main():
         pwd = sys.argv[3]
         r = get_challenge(usr)
         r = login(usr, pwd, r['challenge'])
+        if r['error'] == 'ip_already_online_error' and r['online_ip'] != r['client_ip']:
+            time.sleep(1.0)
+            r = get_challenge(usr)
+            r = logout(usr, r['challenge'])
+            time.sleep(1.0)
+            r = get_challenge(usr)
+            r = login(usr, pwd, r['challenge'])
         print(r)
     elif sys.argv[1] == 'logout':
         r = status()
